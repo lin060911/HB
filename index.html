@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>妈咪生日快乐</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, #ffd6e7 0%, #fa9ec3 40%, #ffcce0 70%, #fbe8ef 100%);
+            font-family: "PingFang SC", "Helvetica Neue", sans-serif;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 520px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .title {
+            font-size: 42px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .title-sub {
+            font-size: 18px;
+            color: #d65696;
+            margin-bottom: 28px;
+            letter-spacing: 2px;
+        }
+
+        .photo-frame {
+            width: 365px;
+            height: 365px;
+            margin: 0 auto 28px;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            border: 4px solid #fff;
+        }
+        .photo-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .message {
+            font-size: 17px;
+            color: #b8125d;
+            line-height: 1.9;
+            margin-bottom: 24px;
+        }
+
+        .footer {
+            font-size: 14px;
+            color: #794364;
+            letter-spacing: 2px;
+        }
+
+        .music-hint {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #8f8f8f;
+        }
+        .music-hint .dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ff6b81;
+            margin-right: 6px;
+            vertical-align: middle;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .particle {
+            position: fixed;
+            top: -60px;
+            pointer-events: none;
+            z-index: 9999;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(110vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .photo-frame {
+                width: 200px;
+                height: 200px;
+            }
+            .title {
+                font-size: 26px;
+            }
+            .message {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="title">妈咪，生日快乐</div>
+        <div class="title-sub">🎉Happy Birthday🎂</div>
+
+        <div class="photo-frame">
+            <img src="img/mm.png" alt="妈咪的照片">
+        </div>
+
+        <div class="message">
+            ヾ(≧▽≦*)o  <strong>天天开心</strong><br>
+            <strong>永远爱你</strong>  (´▽`ʃ♡ƪ) 
+        </div>
+
+        <div class="footer">— 2026.07.25 —</div>
+
+        <div class="music-hint">
+            <span class="dot"></span>
+            <span>点击任意处播放生日歌</span>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+
+        const AudioEngine = (function () {
+            let ctx = null;
+            let masterGain = null;
+            let isPlaying = false;
+            let schedulerTimer = null;
+            let nextNoteTime = 0;
+            let melodyIndex = 0;
+
+            // 生日快乐旋律（C大调）
+            // 拍数基于 BPM=120，一拍 = 0.5s
+            const melody = [
+                // Happy birthday to you
+                { f: 523.25, beats: 0.75 },
+                { f: 523.25, beats: 0.25 },
+                { f: 587.33, beats: 1 },
+                { f: 523.25, beats: 1 },
+                { f: 698.46, beats: 1 },
+                { f: 659.25, beats: 2 },
+                // Happy birthday to you
+                { f: 523.25, beats: 0.75 },
+                { f: 523.25, beats: 0.25 },
+                { f: 587.33, beats: 1 },
+                { f: 523.25, beats: 1 },
+                { f: 783.99, beats: 1 },
+                { f: 698.46, beats: 2 },
+                // Happy birthday dear mommy
+                { f: 523.25, beats: 0.75 },
+                { f: 523.25, beats: 0.25 },
+                { f: 1046.5, beats: 1 },
+                { f: 880.0,  beats: 1 },
+                { f: 698.46, beats: 1 },
+                { f: 659.25, beats: 1 },
+                { f: 587.33, beats: 2 },
+                // Happy birthday to you
+                { f: 987.77, beats: 0.75 },
+                { f: 987.77, beats: 0.25 },
+                { f: 880.0,  beats: 1 },
+                { f: 698.46, beats: 1 },
+                { f: 783.99, beats: 1 },
+                { f: 698.46, beats: 2 },
+            ];
+
+            const beatDuration = 0.5;
+
+            function init() {
+                if (ctx) return;
+                ctx = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = ctx.createGain();
+                masterGain.gain.value = 0.3;
+                masterGain.connect(ctx.destination);
+            }
+
+            function resume() {
+                init();
+                if (ctx.state === 'suspended') ctx.resume();
+            }
+
+            function playNote(freq, startTime, duration) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.12, startTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration - 0.05);
+                osc.connect(gain);
+                gain.connect(masterGain);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'triangle';
+                osc2.frequency.value = freq * 2;
+                gain2.gain.setValueAtTime(0, startTime);
+                gain2.gain.linearRampToValueAtTime(0.03, startTime + 0.02);
+                gain2.gain.exponentialRampToValueAtTime(0.001, startTime + duration - 0.08);
+                osc2.connect(gain2);
+                gain2.connect(masterGain);
+                osc2.start(startTime);
+                osc2.stop(startTime + duration);
+            }
+
+            function playChord(rootFreq, startTime, duration) {
+                const intervals = [1, 5/4, 3/2];
+                intervals.forEach(function (ratio) {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = rootFreq * ratio * 0.5;
+                    gain.gain.setValueAtTime(0, startTime);
+                    gain.gain.linearRampToValueAtTime(0.025, startTime + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                    osc.connect(gain);
+                    gain.connect(masterGain);
+                    osc.start(startTime);
+                    osc.stop(startTime + duration);
+                });
+            }
+
+            const chordRoots = [
+                261.63, 261.63, 261.63, 261.63, 349.23, 349.23,
+                261.63, 261.63, 261.63, 261.63, 349.23, 349.23,
+                261.63, 261.63, 523.25, 440.0,  349.23, 349.23, 349.23,
+                493.88, 493.88, 440.0,  349.23, 349.23, 349.23
+            ];
+
+            function scheduleNotes() {
+                if (!ctx) return;
+                const lookAhead = 1.0;
+
+                while (nextNoteTime < ctx.currentTime + lookAhead && isPlaying) {
+                    const note = melody[melodyIndex];
+                    const dur = note.beats * beatDuration;
+
+                    playNote(note.f, nextNoteTime, dur);
+                    playChord(chordRoots[melodyIndex], nextNoteTime, dur * 0.9);
+
+                    nextNoteTime += dur;
+                    melodyIndex++;
+
+                    if (melodyIndex >= melody.length) {
+                        melodyIndex = 0;
+                        nextNoteTime += 0.5; 
+                    }
+                }
+            }
+
+            function start() {
+                if (isPlaying) return;
+                resume();
+                if (!ctx) return;
+                isPlaying = true;
+                nextNoteTime = ctx.currentTime + 0.1;
+                melodyIndex = 0;
+                schedulerTimer = setInterval(scheduleNotes, 250);
+            }
+
+            function stop() {
+                isPlaying = false;
+                if (schedulerTimer) {
+                    clearInterval(schedulerTimer);
+                    schedulerTimer = null;
+                }
+            }
+
+            return { init, resume, start, stop };
+        })();
+
+        const particleTypes = ['❤️','💖','💗','💕','🎂','🎉','✨','🥰','🥳','🌹'];
+
+        function spawnHeart() {
+            const el = document.createElement('div');
+            el.className = 'particle';
+            el.textContent = particleTypes[Math.floor(Math.random() * particleTypes.length)];
+            el.style.left = (Math.random() * 90 + 5) + 'vw';
+            el.style.fontSize = (18 + Math.random() * 16) + 'px';
+            el.style.animationDuration = (5 + Math.random() * 3) + 's';
+            document.body.appendChild(el);
+            setTimeout(function () { el.remove(); }, 8500);
+        }
+
+        setInterval(spawnHeart, 200);
+        for (let i = 0; i < 4; i++) {
+            setTimeout(spawnHeart, i * 80);
+        }
+
+        let started = false;
+        document.addEventListener('click', function () {
+            AudioEngine.resume();
+            if (!started) {
+                started = true;
+                AudioEngine.start();
+                const hint = document.querySelector('.music-hint');
+                if (hint) hint.innerHTML = '<span class="dot"></span><span>♪ 祝你生日快乐~ ♪ </span>';
+            }
+        });
+
+    })();
+    </script>
+
+</body>
+</html>
