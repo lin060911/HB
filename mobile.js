@@ -1,485 +1,283 @@
-/* ============================================================
-   mobile.js
-   设备检测 · 强制点选 · 长按删除 · 触摸适配
-   全部逻辑仅在手机/触屏设备上激活；桌面端零开销。
-   ============================================================ */
-
-(function () {
+/**
+ * mobile.js - 反向扫雷移动端适配
+ * 功能：设备检测、强制点选、长按删除、菜单按钮迁移、触摸优化
+ */
+(function() {
     'use strict';
 
-    /* ---------- 1. 设备检测 ---------- */
-    function detectMobile() {
-        var ua = navigator.userAgent || '';
-        var isTouchDevice = (
-            'ontouchstart' in window ||
-            navigator.maxTouchPoints > 0 ||
-            navigator.msMaxTouchPoints > 0
-        );
-        var isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-        var isSmallScreen = window.innerWidth <= 900;
-        var isUaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-
-        return (isTouchDevice && isCoarsePointer) || (isUaMobile && isSmallScreen);
+    // ========== 1. 设备检测 ==========
+    function isMobileDevice() {
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile/i.test(ua);
+        const isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        const isSmallScreen = window.innerWidth <= 900;
+        return isMobileUA || isCoarse || isSmallScreen;
     }
 
-    var isMobile = detectMobile();
-
-    if (isMobile) {
-        document.documentElement.classList.add('is-mobile');
+    if (!isMobileDevice()) {
+        // 非移动端直接退出，不执行任何逻辑
+        return;
     }
 
-    /* 非手机设备：不绑定任何手机逻辑，直接退出 */
-    if (!isMobile) return;
+    // ========== 2. 标记移动端 & 全局样式覆盖 ==========
+    document.documentElement.classList.add('is-mobile');
 
-    console.log('[mobile.js] 手机端模式已启用');
+    // 强制点选模式（覆盖桌面端可能保存的拖拽设置）
+    window._placeMode = 'click';
+    try { localStorage.setItem('placeMode_v1', 'click'); } catch(e) {}
 
-    /* ---------- 2. 强制点选模式 ---------- */
-    function forceClickMode() {
-        window._placeMode = 'click';
-        try { localStorage.setItem('placeMode_v1', 'click'); } catch (e) {}
+    // 隐藏桌面端悬浮的模式切换按钮
+    const modeToggleBtn = document.getElementById('modeToggleBtn');
+    if (modeToggleBtn) modeToggleBtn.style.display = 'none';
 
-        var icon = document.getElementById('modeToggleIcon');
-        var label = document.getElementById('modeToggleLabel');
-        if (icon) icon.textContent = '🖱️';
-        if (label) label.textContent = '当前放置方式为：点选（手机端固定）';
+    // ========== 3. 侧边栏按钮迁移到 .panel ==========
+    function injectMobileMenuButtons() {
+        const panel = document.querySelector('.panel');
+        if (!panel) return;
+        if (panel.querySelector('.mobile-menu-row')) return; // 已注入则跳过
 
-        var modeBtn = document.getElementById('modeToggleBtn');
-        if (modeBtn) modeBtn.style.display = 'none';
+        const row = document.createElement('div');
+        row.className = 'mobile-menu-row';
 
-        safeCall(window.render);
-        safeCall(window.renderSlot);
-        safeCall(window.renderTeachBoard);
-        safeCall(window.renderTeachSlot);
-        safeCall(window.renderCreateBoard);
-        safeCall(window.renderCreateMineSlot);
+        const configs = [
+            { text: '📖规则', targetId: 'ruleSidebar' },
+            { text: '💣信息', targetId: 'infoSidebar' },
+            { text: '⚙️菜单', targetId: 'sidebar' },
+            { text: '📝记录', targetId: 'achSidebar' },
+        ];
+
+        configs.forEach(function(cfg) {
+            const btn = document.createElement('button');
+            btn.className = 'mobile-menu-btn';
+            btn.type = 'button';
+            btn.textContent = cfg.text;
+
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const sidebar = document.getElementById(cfg.targetId);
+                if (!sidebar) return;
+
+                const wasOpen = sidebar.classList.contains('open');
+
+                // 关闭所有侧边栏
+                ['sidebar', 'infoSidebar', 'ruleSidebar', 'achSidebar'].forEach(function(id) {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.remove('open');
+                });
+
+                if (!wasOpen) {
+                    sidebar.classList.add('open');
+                    if (window.AudioFX && typeof AudioFX.confirm === 'function') {
+                        AudioFX.confirm();
+                    }
+                }
+            });
+
+            row.appendChild(btn);
+        });
+
+        panel.appendChild(row);
     }
 
-    function safeCall(fn) {
-        if (typeof fn === 'function') {
-            try { fn(); } catch (e) {}
-        }
+    // ========== 4. 长按删除逻辑 ==========
+    let longPressTimer = null;
+    let longPressTarget = null;
+    let longPressFired = false;
+    const LONG_PRESS_DURATION = 600; // 毫秒
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    function getCellFromTouch(touch) {
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (!target) return null;
+        return target.closest('.cell');
     }
 
-    function scheduleForce() {
-        setTimeout(forceClickMode, 0);
-        setTimeout(forceClickMode, 100);
-        setTimeout(forceClickMode, 500);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', scheduleForce);
-    } else {
-        scheduleForce();
-    }
-    window.addEventListener('load', scheduleForce);
-
-    /* ---------- 3. 长按删除 ---------- */
-    var longPressTimer = null;
-    var longPressFired = false;
-    var touchStartPos = null;
-    var LONG_PRESS_DELAY = 500;
-    var MOVE_THRESHOLD = 10;
-
-    function clearLongPress() {
+    function cancelLongPress() {
         if (longPressTimer) {
             clearTimeout(longPressTimer);
             longPressTimer = null;
         }
+        if (longPressTarget) {
+            longPressTarget.classList.remove('pressing');
+            longPressTarget = null;
+        }
         longPressFired = false;
-        touchStartPos = null;
     }
 
-    function findAncestor(el, className) {
-        while (el && !el.classList.contains(className)) {
-            el = el.parentElement;
-        }
-        return el;
-    }
-
-    function getCellCoords(el) {
-        var cell = findAncestor(el, 'cell');
-        if (!cell) return null;
-        var r = parseInt(cell.dataset.r, 10);
-        var c = parseInt(cell.dataset.c, 10);
-        if (isNaN(r) || isNaN(c)) return null;
-        return { r: r, c: c, el: cell };
-    }
-
-    function cellHasMine(cell) {
-        return cell && cell.classList.contains('mine-here');
-    }
-
-    function doLongPressDelete(coords) {
-        if (!coords) return;
-
-        if (window.teachActive) {
-            if (typeof window.teachRemove === 'function') {
-                window.teachRemove(coords.r, coords.c);
-                vibrate(30);
-                showToast('已删除 🗑️');
-                return;
-            }
-        }
-
-        if (typeof window._gameNS !== 'undefined' && typeof window._gameNS.del === 'function') {
-            var cell = coords.el || document.querySelector('.cell[data-r="' + coords.r + '"][data-c="' + coords.c + '"]');
-            if (cell && cellHasMine(cell)) {
-                window._gameNS.del(coords.r, coords.c);
-                vibrate(30);
-                showToast('已删除 🗑️');
-            }
+    function onTouchStart(e) {
+        if (e.touches.length !== 1) {
+            cancelLongPress();
             return;
         }
+        const touch = e.touches[0];
+        const cell = getCellFromTouch(touch);
+        if (!cell) return;
 
-        var target = coords.el;
-        if (target) {
-            try {
-                var evt = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
-                target.dispatchEvent(evt);
-                vibrate(20);
-                showToast('已删除 🗑️');
-            } catch (e) {}
-        }
-    }
+        // 只有包含地雷的格子才响应长按删除
+        if (!cell.classList.contains('mine-here')) return;
 
-    function doLongPressDeselect() {
-        if (window.selectedMineType !== undefined) window.selectedMineType = null;
-        if (window._teachSelectedType !== undefined) window._teachSelectedType = null;
-        if (window._createSelectedType !== undefined) window._createSelectedType = null;
-
-        safeCall(window.renderSlot);
-        safeCall(window.renderTeachSlot);
-        safeCall(window.renderCreateMineSlot);
-
-        vibrate(20);
-        showToast('已取消选中');
-    }
-
-    document.addEventListener('touchstart', function (e) {
-        var touch = e.touches[0];
-        if (!touch) return;
-
-        touchStartPos = { x: touch.clientX, y: touch.clientY };
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        longPressTarget = cell;
         longPressFired = false;
+        cell.classList.add('pressing');
 
-        var coords = getCellCoords(e.target);
-
-        if (coords && cellHasMine(coords.el)) {
-            longPressTimer = setTimeout(function () {
-                longPressFired = true;
-                doLongPressDelete(coords);
-                longPressTimer = null;
-            }, LONG_PRESS_DELAY);
-        } else {
-            var mineItem = findAncestor(e.target, 'mine-item');
-            if (mineItem && mineItem.classList.contains('selected')) {
-                longPressTimer = setTimeout(function () {
-                    longPressFired = true;
-                    doLongPressDeselect();
-                    longPressTimer = null;
-                }, LONG_PRESS_DELAY);
+        longPressTimer = setTimeout(function() {
+            longPressFired = true;
+            if (longPressTarget) {
+                longPressTarget.classList.remove('pressing');
             }
+
+            // 获取坐标
+            const r = parseInt(cell.dataset.r, 10);
+            const c = parseInt(cell.dataset.c, 10);
+            if (isNaN(r) || isNaN(c)) return;
+
+            // 根据当前模式执行删除
+            if (typeof window.teachActive !== 'undefined' && window.teachActive) {
+                if (typeof window.teachRemove === 'function') {
+                    window.teachRemove(r, c);
+                }
+            } else if (typeof window.createModeActive !== 'undefined' && window.createModeActive) {
+                // 创造模式
+                const key = r + ',' + c;
+                if (window.createPlaced && window.createPlaced[key]) {
+                    delete window.createPlaced[key];
+                    if (window.AudioFX && typeof AudioFX.remove === 'function') AudioFX.remove();
+                    if (typeof window.renderCreateBoard === 'function') window.renderCreateBoard();
+                    if (typeof window.renderCreateMineSlot === 'function') window.renderCreateMineSlot();
+                    if (typeof window.refreshCreateInfoBar === 'function') window.refreshCreateInfoBar();
+                }
+            } else {
+                // 普通游戏模式
+                if (typeof window.del === 'function') {
+                    window.del(r, c);
+                }
+            }
+
+            // 触觉反馈
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+
+            longPressTarget = null;
+            longPressTimer = null;
+        }, LONG_PRESS_DURATION);
+    }
+
+    function onTouchMove(e) {
+        if (!longPressTarget || !longPressTimer) return;
+        if (e.touches.length !== 1) {
+            cancelLongPress();
+            return;
         }
-    }, { passive: true });
-
-    document.addEventListener('touchmove', function (e) {
-        if (!touchStartPos || !longPressTimer) return;
-        var touch = e.touches[0];
-        if (!touch) return;
-        var dx = Math.abs(touch.clientX - touchStartPos.x);
-        var dy = Math.abs(touch.clientY - touchStartPos.y);
-        if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
-            clearLongPress();
+        const touch = e.touches[0];
+        // 移动距离超过阈值则取消
+        const dx = Math.abs(touch.clientX - touchStartX);
+        const dy = Math.abs(touch.clientY - touchStartY);
+        if (dx > 10 || dy > 10) {
+            cancelLongPress();
+            return;
         }
-    }, { passive: true });
+        // 手指滑出当前 cell 也取消
+        const cell = getCellFromTouch(touch);
+        if (cell !== longPressTarget) {
+            cancelLongPress();
+        }
+    }
 
-    document.addEventListener('touchend', function (e) {
-        clearLongPress();
-    });
-    document.addEventListener('touchcancel', clearLongPress);
+    function onTouchEnd(e) {
+        if (longPressFired) {
+            // 长按已触发，阻止此次 touch 产生的 click
+            e.preventDefault();
+            blockNextClick();
+        }
+        cancelLongPress();
+    }
 
-    /* ---------- 4. 触摸适配增强 ---------- */
+    // 阻止长按后紧随的 click 事件（避免误放置）
+    let blockClick = false;
+    function blockNextClick() {
+        blockClick = true;
+        setTimeout(function() { blockClick = false; }, 120);
+    }
 
-    /* 4a. 禁用双击缩放 */
-    var lastTouchEnd = 0;
-    document.addEventListener('touchend', function (e) {
-        var now = Date.now();
+    document.addEventListener('click', function(e) {
+        if (blockClick) {
+            e.stopPropagation();
+            e.preventDefault();
+            blockClick = false;
+        }
+    }, true);
+
+    // ========== 5. 触摸全局优化 ==========
+    // 禁用默认上下文菜单（防止长按弹出系统菜单）
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    }, true);
+
+    // 阻止双击缩放（部分浏览器）
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+        const now = Date.now();
         if (now - lastTouchEnd <= 300) {
             e.preventDefault();
         }
         lastTouchEnd = now;
-    }, { passive: false });
+    }, false);
 
-    /* 4b. 阻止棋盘区域的手势缩放 */
-    var board = document.getElementById('board');
-    if (board) {
-        board.addEventListener('gesturestart', function (e) { e.preventDefault(); });
-        board.addEventListener('gesturechange', function (e) { e.preventDefault(); });
-    }
-
-    /* 4c. 棋盘极缩放：用 transform: scale()，不改变 grid 逻辑结构 */
-    function wrapBoard() {
-        var boardEl = document.getElementById('board');
-        if (!boardEl || boardEl.parentElement.classList.contains('board-wrapper')) return;
-        var wrapper = document.createElement('div');
-        wrapper.className = 'board-wrapper';
-        wrapper.id = 'boardWrapper';
-        boardEl.parentNode.insertBefore(wrapper, boardEl);
-        wrapper.appendChild(boardEl);
-    }
-
-    function getText(id) {
-        var el = document.getElementById(id);
-        return el ? el.textContent.trim() : '';
-    }
-
-    function calcBoardScale() {
-        var boardEl = document.getElementById('board');
-        if (!boardEl) return;
-
-        var sr = window.SR || parseInt(getText('size'), 10) || 10;
-        var sc = window.SC || sr;
-        var cols = Math.max(sr, sc);
-
-        /* 测量格子实际渲染尺寸（桌面端基础值） */
-        var sampleCell = boardEl.querySelector('.cell');
-        var baseCell = 40; /* 桌面端 CSS 基础尺寸 */
-        if (sampleCell) {
-            var rect = sampleCell.getBoundingClientRect();
-            if (rect.width > 0) baseCell = rect.width;
-        }
-
-        var vw = window.innerWidth;
-        var sidePadding = vw <= 375 ? 16 : (vw <= 414 ? 20 : 24);
-        var availableWidth = vw - sidePadding;
-        /* 格子间距约 2px */
-        var boardWidth = cols * baseCell + (cols - 1) * 2 + 8; /* +8 为 board padding */
-        var scale = availableWidth / boardWidth;
-        scale = Math.max(0.45, Math.min(scale, 1.0));
-
-        boardEl.style.transform = 'scale(' + scale + ')';
-        boardEl.style.transformOrigin = 'top center';
-        /* 用 wrapper 控制占位高度，避免 scale 后塌陷 */
-        var wrapper = document.getElementById('boardWrapper');
-        if (wrapper) {
-            wrapper.style.height = (boardEl.offsetHeight * scale) + 'px';
-        }
-
-        /* 同步创造模式棋盘 */
-        var createArea = document.getElementById('createBoardArea');
-        if (createArea) {
-            var createBoard = createArea.querySelector('.board');
-            if (createBoard) {
-                createBoard.style.transform = 'scale(' + scale + ')';
-                createBoard.style.transformOrigin = 'top center';
+    // ========== 6. 侧边栏触摸关闭 ==========
+    document.addEventListener('touchstart', function(e) {
+        const target = e.target;
+        const sidebars = document.querySelectorAll('.sidebar, .info-sidebar, .rule-sidebar, .achievement-sidebar');
+        sidebars.forEach(function(sb) {
+            if (sb.classList.contains('open') && !sb.contains(target) && !target.closest('.mobile-menu-btn')) {
+                sb.classList.remove('open');
             }
-        }
-    }
-
-    function initBoard() {
-        wrapBoard();
-        calcBoardScale();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initBoard);
-    } else {
-        initBoard();
-    }
-    window.addEventListener('load', initBoard);
-
-    var resizeTimer = null;
-    window.addEventListener('resize', function () {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(calcBoardScale, 100);
-    });
-    window.addEventListener('orientationchange', function () {
-        setTimeout(calcBoardScale, 200);
-        setTimeout(calcBoardScale, 500);
-    });
-
-    /* 棋盘 DOM 变化后重新计算 */
-    var boardEl = document.getElementById('board');
-    if (boardEl && typeof MutationObserver !== 'undefined') {
-        var observer = new MutationObserver(function (mutations) {
-            var shouldRecalc = false;
-            for (var i = 0; i < mutations.length; i++) {
-                if (mutations[i].type === 'childList' && mutations[i].addedNodes.length > 0) {
-                    shouldRecalc = true;
-                    break;
-                }
-            }
-            if (shouldRecalc) calcBoardScale();
         });
-        observer.observe(boardEl, { childList: true, subtree: true });
-    }
-
-    /* ---------- 5. 第二行按钮：仅侧边栏切换（4个） ---------- */
-    /* 不重复 .panel 里已有的 新游戏/清空/创造/教学 按钮 */
-    function buildSidebarButtonRow() {
-        if (document.querySelector('.panel-sidebar-row')) return;
-
-        var panel = document.querySelector('.panel');
-        if (!panel) return;
-
-        var row = document.createElement('div');
-        row.className = 'panel-sidebar-row';
-
-        var buttons = [
-            { cls: 'psb-rules',   text: '📖 规则',   action: function () { clickEl('toggleRuleSidebar'); } },
-            { cls: 'psb-info',    text: '💣 炸弹信息', action: function () { clickEl('toggleInfoSidebar'); } },
-            { cls: 'psb-records', text: '📝 记录',   action: function () { clickEl('toggleAchSidebar'); } },
-            { cls: 'psb-menu',    text: '⚙️ 菜单',   action: function () { clickEl('toggleSidebar'); } }
-        ];
-
-        for (var b = 0; b < buttons.length; b++) {
-            var btn = document.createElement('button');
-            btn.className = buttons[b].cls;
-            btn.textContent = buttons[b].text;
-            btn.addEventListener('click', buttons[b].action);
-            btn.addEventListener('touchend', (function (action) {
-                return function (e) {
-                    e.preventDefault();
-                    action();
-                };
-            })(buttons[b].action), { passive: false });
-            row.appendChild(btn);
-        }
-
-        /* 插入到 .panel 之后，作为第二行 */
-        panel.parentNode.insertBefore(row, panel.nextSibling);
-    }
-
-    function clickEl(id) {
-        var el = document.getElementById(id);
-        if (el) el.click();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', buildSidebarButtonRow);
-    } else {
-        buildSidebarButtonRow();
-    }
-    window.addEventListener('load', buildSidebarButtonRow);
-
-    /* ---------- 6. 触感反馈（Vibration API） ---------- */
-    function vibrate(ms) {
-        if (navigator.vibrate) {
-            try { navigator.vibrate(ms || 20); } catch (e) {}
-        }
-    }
-
-    if (window.AudioFX) {
-        var origPlace = window.AudioFX.place;
-        if (origPlace) {
-            window.AudioFX.place = function () {
-                vibrate(15);
-                origPlace.apply(this, arguments);
-            };
-        }
-        var origRemove = window.AudioFX.remove;
-        if (origRemove) {
-            window.AudioFX.remove = function () {
-                vibrate(25);
-                origRemove.apply(this, arguments);
-            };
-        }
-        var origConfirm = window.AudioFX.confirm;
-        if (origConfirm) {
-            window.AudioFX.confirm = function () {
-                vibrate(10);
-                origConfirm.apply(this, arguments);
-            };
-        }
-        var origWin = window.AudioFX.win;
-        if (origWin) {
-            window.AudioFX.win = function () {
-                vibrate([20, 50, 20]);
-                origWin.apply(this, arguments);
-            };
-        }
-    }
-
-    /* ---------- 7. 轻量 Toast 提示 ---------- */
-    function showToast(msg) {
-        var toast = document.getElementById('mobileToast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'mobileToast';
-            toast.style.cssText = [
-                'position: fixed',
-                'bottom: 80px',
-                'left: 50%',
-                'transform: translateX(-50%) translateY(20px)',
-                'background: rgba(0,0,0,0.75)',
-                'color: #fff',
-                'padding: 8px 18px',
-                'border-radius: 20px',
-                'font-size: 13px',
-                'z-index: 9999',
-                'pointer-events: none',
-                'opacity: 0',
-                'transition: opacity 0.3s, transform 0.3s',
-                'white-space: nowrap'
-            ].join(';');
-            document.body.appendChild(toast);
-        }
-        toast.textContent = msg;
-        void toast.offsetWidth;
-        toast.style.opacity = '1';
-        toast.style.transform = 'translateX(-50%) translateY(0)';
-        clearTimeout(toast._timer);
-        toast._timer = setTimeout(function () {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(-50%) translateY(20px)';
-        }, 1500);
-    }
-
-    /* ---------- 8. 点击空白关闭侧边栏 ---------- */
-    document.addEventListener('touchstart', function (e) {
-        var sidebars = [
-            { el: document.getElementById('sidebar'),     btn: document.getElementById('toggleSidebar') },
-            { el: document.getElementById('infoSidebar'), btn: document.getElementById('toggleInfoSidebar') },
-            { el: document.getElementById('ruleSidebar'), btn: document.getElementById('toggleRuleSidebar') },
-            { el: document.getElementById('achSidebar'),  btn: document.getElementById('toggleAchSidebar') }
-        ];
-        for (var i = 0; i < sidebars.length; i++) {
-            var sb = sidebars[i];
-            if (!sb.el || !sb.btn) continue;
-            if (!sb.el.classList.contains('open')) continue;
-            if (sb.el.contains(e.target) || sb.btn.contains(e.target)) continue;
-            sb.el.classList.remove('open');
-        }
     }, { passive: true });
 
-    /* ---------- 9. 输入框特殊处理 ---------- */
-    ['createSize', 'createSize2'].forEach(function (id) {
-        var inp = document.getElementById(id);
-        if (inp) {
-            inp.addEventListener('focus', function () { this.style.fontSize = '16px'; });
-            inp.addEventListener('blur', function () { this.style.fontSize = ''; });
-        }
+    // ========== 7. 绑定长按事件（事件委托 + 动态监听） ==========
+    function attachBoardLongPress(boardEl) {
+        if (!boardEl || boardEl._mobileLongPressAttached) return;
+        boardEl._mobileLongPressAttached = true;
+
+        boardEl.addEventListener('touchstart', onTouchStart, { passive: true });
+        boardEl.addEventListener('touchmove', onTouchMove, { passive: true });
+        boardEl.addEventListener('touchend', onTouchEnd, { passive: false });
+        boardEl.addEventListener('touchcancel', cancelLongPress, { passive: true });
+    }
+
+    // 初始绑定
+    attachBoardLongPress(document.getElementById('board'));
+    attachBoardLongPress(document.getElementById('createBoardArea'));
+
+    // 监听 DOM 变化，为新生成的棋盘自动绑定
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType !== 1) return;
+                if (node.id === 'board' || (node.classList && node.classList.contains('board'))) {
+                    attachBoardLongPress(node);
+                }
+                if (node.id === 'createBoardArea') {
+                    attachBoardLongPress(node);
+                }
+                // 如果 panel 被重新渲染，需要重新注入菜单按钮
+                if (node.classList && node.classList.contains('panel')) {
+                    injectMobileMenuButtons();
+                }
+            });
+        });
     });
+    observer.observe(document.body, { childList: true, subtree: true });
 
-    /* ---------- 10. 提示横幅 ---------- */
-    function showLongPressHint() {
-        if (document.querySelector('.long-press-hint')) return;
-        var hint = document.createElement('div');
-        hint.className = 'long-press-hint';
-        hint.textContent = '💡 长按地雷可删除';
-        document.body.appendChild(hint);
-        setTimeout(function () {
-            hint.style.transition = 'opacity 1s';
-            hint.style.opacity = '0';
-            setTimeout(function () { hint.remove(); }, 1200);
-        }, 5000);
-    }
+    // ========== 8. 初始化入口 ==========
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', showLongPressHint);
+        document.addEventListener('DOMContentLoaded', injectMobileMenuButtons);
     } else {
-        showLongPressHint();
+        injectMobileMenuButtons();
     }
-
-    console.log('[mobile.js] 手机端适配初始化完成');
 
 })();
