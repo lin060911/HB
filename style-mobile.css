@@ -1,0 +1,314 @@
+/* ============================================================
+   style-mobile.css — 手机端兼容补丁（append-only，不修改原样式）
+   通过 html.is-mobile / body.is-mobile 限定作用域
+   ============================================================ */
+
+/* ─── 1. 基础 / viewport 适配 ───────────────────────────── */
+html.is-mobile,
+html.is-mobile body {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;       /* 禁双击缩放 */
+    overscroll-behavior-y: contain;   /* 防下拉刷新干扰 */
+}
+
+html.is-mobile body {
+    padding: 10px 6px;
+    min-height: 100vh;
+    min-height: 100dvh;              /* 适配移动端动态视口 */
+    overflow-x: hidden;
+}
+
+/* 安全区域（刘海屏/圆角） */
+html.is-mobile body {
+    padding-top: calc(10px + env(safe-area-inset-top));
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    padding-left: calc(6px + env(safe-area-inset-left));
+    padding-right: calc(6px + env(safe-area-inset-right));
+}
+
+/* ─── 2. 标题缩小 ──────────────────────────────────────── */
+html.is-mobile .game-title {
+    font-size: 32px;
+    margin: 8px 0;
+    letter-spacing: 1px;
+}
+
+html.is-mobile .rule {
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+/* ─── 3. 顶部按钮栏（替代桌面端侧边栏 toggle） ────────── */
+html.is-mobile .panel {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+    justify-content: center;
+}
+
+html.is-mobile .panel button {
+    padding: 8px 14px;
+    font-size: 13px;
+    border-width: 2px;
+}
+
+/* 手机快捷按钮（由 mobile.js 动态插入） */
+html.is-mobile .mb-quick-btn {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 2px solid #4299e1;
+    background: #fff;
+    color: #2b6cb0;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: transform .2s, background .2s;
+}
+html.is-mobile .mb-quick-btn:active {
+    transform: scale(.94);
+    background: #ebf8ff;
+}
+
+/* 隐藏桌面端左侧竖排 toggle 按钮 */
+html.is-mobile .left-sidebar-container,
+html.is-mobile .sidebar-toggle,
+html.is-mobile .mode-toggle-btn {
+    display: none !important;
+}
+
+/* ─── 4. 棋盘自适应 ────────────────────────────────────── */
+html.is-mobile .board {
+    gap: 1px;
+    padding: 2px;
+    border-radius: 8px;
+    /* grid-template 由 JS 动态设置 */
+}
+
+html.is-mobile .cell {
+    min-width: 0;
+    min-height: 0;
+    border-radius: 3px;
+    font-size: 11px;
+    line-height: 1;
+}
+
+/* 地雷单元格：防止溢出 */
+html.is-mobile .cell.mine-here {
+    overflow: hidden;
+}
+
+/* ─── 5. 信息条 / 计时器 ──────────────────────────────── */
+html.is-mobile .info {
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+html.is-mobile .timer-box {
+    font-size: 14px;
+    padding: 4px 10px;
+    margin: 6px 0;
+}
+
+/* ─── 6. 地雷槽（mine-slot） ───────────────────────────── */
+html.is-mobile .mine-slot-box {
+    gap: 8px;
+    padding: 12px 10px;
+    border-radius: 10px;
+    margin-top: 12px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+}
+
+html.is-mobile .mine-item {
+    width: 64px;
+    height: 70px;
+    font-size: 11px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+html.is-mobile .mine-item .emoji-drag {
+    font-size: 20px !important;
+    margin-bottom: 2px;
+}
+
+/* ─── 7. 侧边栏 → 全屏覆盖 ────────────────────────────── */
+html.is-mobile .sidebar,
+html.is-mobile .info-sidebar,
+html.is-mobile .rule-sidebar,
+html.is-mobile .achievement-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 16px 14px;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    z-index: 1500;
+}
+
+/* 侧边栏打开时锁定背景滚动 */
+html.is-mobile body.sb-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+}
+
+/* ─── 8. 弹窗 / 模态框 ─────────────────────────────────── */
+html.is-mobile .auto-modal,
+html.is-mobile .teach-complete-modal,
+html.is-mobile .brain-win-modal,
+html.is-mobile .preset-start-card {
+    min-width: unset !important;
+    width: calc(100% - 32px) !important;
+    max-width: 480px;
+    padding: 24px 18px;
+    border-radius: 16px;
+    margin: 0 auto;
+}
+
+html.is-mobile .brain-win-modal {
+    width: calc(100% - 24px) !important;
+    max-width: 420px;
+    padding: 32px 20px 26px;
+}
+
+html.is-mobile .auto-modal button,
+html.is-mobile .teach-complete-modal button,
+html.is-mobile .preset-start-btn {
+    padding: 10px 20px;
+    font-size: 15px;
+    border-radius: 10px;
+    min-height: 44px;       /* 触摸友好 */
+}
+
+/* 胜利大弹窗 */
+html.is-mobile .win {
+    font-size: 28px;
+}
+html.is-mobile .win button {
+    padding: 12px 28px;
+    font-size: 16px;
+    min-height: 48px;
+}
+
+/* ─── 9. 教学气泡 ──────────────────────────────────────── */
+html.is-mobile .teach-bubble {
+    max-width: calc(100% - 24px);
+    font-size: 13px;
+    padding: 10px 14px;
+}
+
+html.is-mobile .teach-progress-bar-inline {
+    font-size: 12px;
+}
+
+/* ─── 10. 创造模式面板 ──────────────────────────────────── */
+html.is-mobile .create-mode-panel {
+    width: 100%;
+    padding: 12px;
+}
+
+html.is-mobile .create-card {
+    padding: 12px;
+}
+
+html.is-mobile .create-size-row {
+    flex-direction: column;
+    gap: 10px;
+}
+
+html.is-mobile .create-size-field label {
+    font-size: 13px;
+}
+
+html.is-mobile .create-btn,
+html.is-mobile .create-btn-primary,
+html.is-mobile .apply-btn,
+html.is-mobile .apply-input-btn,
+html.is-mobile .share-btn {
+    min-height: 42px;
+    font-size: 14px;
+}
+
+/* ─── 11. 难度按钮 ─────────────────────────────────────── */
+html.is-mobile .preset-row {
+    gap: 5px;
+}
+
+html.is-mobile .preset-btn {
+    padding: 8px 0;
+    font-size: 12px;
+    border-width: 3px;
+    min-height: 42px;
+}
+
+/* 自定义面板 */
+html.is-mobile .custom-panel {
+    padding: 10px;
+}
+
+html.is-mobile .custom-item label {
+    font-size: 13px;
+}
+
+html.is-mobile .num-btn {
+    width: 36px;
+    height: 36px;
+}
+
+html.is-mobile .num-display {
+    width: 40px;
+    height: 36px;
+    line-height: 36px;
+}
+
+/* ─── 12. 背景音乐滑块 ──────────────────────────────────── */
+html.is-mobile .bgm-slider {
+    width: 100%;
+    height: 24px;
+}
+
+/* ─── 13. 防止文本选中 / 长按菜单 ──────────────────────── */
+html.is-mobile body {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* 允许在输入框中选文本 */
+html.is-mobile input[type="text"],
+html.is-mobile input[type="number"],
+html.is-mobile textarea {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* 禁用系统长按菜单（保留在已放置雷格上的自定义长按） */
+html.is-mobile .cell.mine-here {
+    -webkit-touch-callout: none;
+}
+
+/* ─── 14. 飘落 emoji 性能降级 ──────────────────────────── */
+html.is-mobile .falling-emoji {
+    font-size: 20px !important;
+}
+
+/* ─── 15. 横屏微调 ──────────────────────────────────────── */
+@media (max-width: 900px) and (orientation: landscape) {
+    html.is-mobile .game-title { font-size: 24px; margin: 4px 0; }
+    html.is-mobile .rule { font-size: 11px; margin-bottom: 6px; }
+    html.is-mobile .panel { margin-bottom: 6px; }
+    html.is-mobile .panel button { padding: 6px 10px; font-size: 12px; }
+    html.is-mobile .info { font-size: 12px; margin-bottom: 4px; }
+    html.is-mobile .timer-box { font-size: 12px; padding: 3px 8px; }
+    html.is-mobile .mine-slot-box { margin-top: 8px; padding: 8px; }
+    html.is-mobile .mine-item { width: 52px; height: 58px; }
+    html.is-mobile .mine-item .emoji-drag { font-size: 16px !important; }
+}
+
+/* ─── 16. 超小屏 (<360px) 兜底 ────────────────────────── */
+@media (max-width: 360px) {
+    html.is-mobile .game-title { font-size: 26px; }
+    html.is-mobile .panel button { padding: 6px 8px; font-size: 11px; }
+    html.is-mobile .mb-quick-btn { padding: 6px 8px; font-size: 11px; }
+}
