@@ -8,6 +8,8 @@ html.is-mobile body {
     padding: 10px 6px;
     min-height: 100vh;
     overflow-x: hidden;
+    /* 允许纵向滚动，不再全局禁止 */
+    overflow-y: auto;
     font-size: 14px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -20,12 +22,14 @@ html.is-mobile .game-title {
     font-size: 32px;
     margin: 8px 0;
     letter-spacing: 1px;
+    text-align: center;
 }
 
 html.is-mobile .rule {
     font-size: 13px;
     margin-bottom: 10px;
     padding: 0 4px;
+    text-align: center;
 }
 
 /* ---------- 放置方式切换按钮（隐藏，手机固定点选） ---------- */
@@ -33,127 +37,229 @@ html.is-mobile .mode-toggle-btn {
     display: none !important;
 }
 
-/* ---------- 主操作面板（新游戏/清空/创造/教学） ---------- */
+/* ---------- 主操作面板（第一行：新游戏/清空/创造/教学） ---------- */
 html.is-mobile .panel {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: 6px;
-    margin-bottom: 10px;
-    justify-content: center;
+    margin-bottom: 8px;
+    width: 100%;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 html.is-mobile .panel button {
-    padding: 8px 14px;
+    padding: 10px 4px;
     font-size: 13px;
-    border-radius: 8px;
+    border-radius: 10px;
     border-width: 2px;
-    flex: 1 1 calc(50% - 6px);
-    min-width: 80px;
-    max-width: 140px;
+    width: 100%;
+    min-width: 0;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.3s ease;
 }
 
-/* ---------- 手机端专用：侧边栏快捷按钮行 ---------- */
-html.is-mobile .mobile-sidebar-row {
-    display: flex !important;
-    flex-wrap: wrap;
+html.is-mobile .panel button:active {
+    transform: scale(0.94);
+}
+
+/* 差异化配色 */
+html.is-mobile #reset {
+    background: linear-gradient(180deg, #ff5e5e, #e83838);
+    border-color: #ff7070;
+}
+html.is-mobile #clear {
+    background: linear-gradient(180deg, #ffa048, #f08020);
+    border-color: #ffb84d;
+}
+html.is-mobile #createBtn {
+    background: linear-gradient(180deg, #34dca0, #1ab883);
+    border-color: #6ef0c0;
+}
+html.is-mobile #tutorialBtn {
+    background: linear-gradient(180deg, #6a7ce5, #4a5cc5);
+    border-color: #8ab8f0;
+}
+
+/* ---------- 手机端专用：两行四列按钮组 ---------- */
+html.is-mobile .mobile-btn-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: 6px;
-    margin-bottom: 10px;
-    justify-content: center;
+    margin-bottom: 12px;
+    width: 100%;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-html.is-mobile .mobile-sidebar-row button {
-    padding: 8px 10px;
+html.is-mobile .mobile-btn-grid button {
+    padding: 10px 4px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     border: none;
     border-radius: 10px;
     cursor: pointer;
     color: #fff;
-    flex: 1 1 calc(33% - 6px);
-    min-width: 72px;
-    max-width: 110px;
+    width: 100%;
+    min-width: 0;
+    letter-spacing: 0.2px;
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
                 box-shadow 0.3s ease,
                 filter 0.3s ease;
     box-shadow: 0 2px 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15);
-    letter-spacing: 0.3px;
 }
 
-html.is-mobile .mobile-sidebar-row button:active {
-    transform: scale(0.96);
+html.is-mobile .mobile-btn-grid button:active {
+    transform: scale(0.94);
 }
 
-/* 各按钮差异化配色 */
-html.is-mobile .mobile-btn-rules {
-    background: linear-gradient(180deg, #4ac864, #2da84a);
+/* 第一行：新游戏-红 / 清空-橙 / 创造-绿 / 教学-紫 */
+html.is-mobile .mbg-reset {
+    background: linear-gradient(180deg, #ff5e5e, #e83838) !important;
 }
-html.is-mobile .mobile-btn-rules:hover {
-    background: linear-gradient(180deg, #5cd878, #3cb85a);
-    transform: scale(1.04);
+html.is-mobile .mbg-reset:active {
+    background: linear-gradient(180deg, #e04848, #c53030) !important;
 }
-
-html.is-mobile .mobile-btn-info {
-    background: linear-gradient(180deg, #4a9eff, #2a7ee0);
+html.is-mobile .mbg-clear {
+    background: linear-gradient(180deg, #ffa048, #f08020) !important;
 }
-html.is-mobile .mobile-btn-info:hover {
-    background: linear-gradient(180deg, #5cb5ff, #3a8ef0);
-    transform: scale(1.04);
+html.is-mobile .mbg-clear:active {
+    background: linear-gradient(180deg, #ff8c30, #e0701a) !important;
 }
-
-html.is-mobile .mobile-btn-menu {
-    background: linear-gradient(180deg, #6a7ce5, #4a5cc5);
+html.is-mobile .mbg-create {
+    background: linear-gradient(180deg, #34dca0, #1ab883) !important;
 }
-html.is-mobile .mobile-btn-menu:hover {
-    background: linear-gradient(180deg, #7b8cf5, #5a6cd5);
-    transform: scale(1.04);
+html.is-mobile .mbg-create:active {
+    background: linear-gradient(180deg, #2cc794, #16a875) !important;
 }
-
-html.is-mobile .mobile-btn-records {
-    background: linear-gradient(180deg, #e8a020, #c08010);
+html.is-mobile .mbg-tutorial {
+    background: linear-gradient(180deg, #6a7ce5, #4a5cc5) !important;
 }
-html.is-mobile .mobile-btn-records:hover {
-    background: linear-gradient(180deg, #f0b030, #d09020);
-    transform: scale(1.04);
+html.is-mobile .mbg-tutorial:active {
+    background: linear-gradient(180deg, #5b6ed8, #4255b8) !important;
 }
 
-html.is-mobile .mobile-btn-bgm {
-    background: linear-gradient(180deg, #5a83d5, #3a63b5);
+/* 第二行：规则-绿 / 炸弹信息-蓝 / 记录-琥珀 / 菜单-靛蓝 */
+html.is-mobile .mbg-rules {
+    background: linear-gradient(180deg, #4ac864, #2da84a) !important;
 }
-html.is-mobile .mobile-btn-bgm:hover {
-    background: linear-gradient(180deg, #6a93e5, #4a73c5);
-    transform: scale(1.04);
+html.is-mobile .mbg-rules:active {
+    background: linear-gradient(180deg, #5cd878, #3cb85a) !important;
+}
+html.is-mobile .mbg-info {
+    background: linear-gradient(180deg, #4a9eff, #2a7ee0) !important;
+}
+html.is-mobile .mbg-info:active {
+    background: linear-gradient(180deg, #5cb5ff, #3a8ef0) !important;
+}
+html.is-mobile .mbg-records {
+    background: linear-gradient(180deg, #e8a020, #c08010) !important;
+}
+html.is-mobile .mbg-records:active {
+    background: linear-gradient(180deg, #f0b030, #d09020) !important;
+}
+html.is-mobile .mbg-menu {
+    background: linear-gradient(180deg, #6a7ce5, #4a5cc5) !important;
+}
+html.is-mobile .mbg-menu:active {
+    background: linear-gradient(180deg, #7b8cf5, #5a6cd5) !important;
 }
 
 /* ---------- 计时器 ---------- */
 html.is-mobile .timer-box {
     font-size: 14px;
     padding: 4px 10px;
-    margin: 6px 0;
+    margin: 6px auto;
     border-radius: 8px;
+    display: block;
+    text-align: center;
 }
 
 /* ---------- 信息栏 ---------- */
 html.is-mobile .info {
     font-size: 13px;
     margin-bottom: 8px;
+    text-align: center;
 }
 
-/* ---------- 教学进度条 ---------- */
-html.is-mobile #tutorialProgressBar,
-html.is-mobile #teachProgressBar {
-    width: 90%;
-    max-width: 400px;
+/* ---------- 教学进度条：水平居中 ---------- */
+html.is-mobile #tutorialProgressBar {
+    width: 88%;
+    max-width: 420px;
     padding: 10px 14px;
     margin: 8px auto;
+    border-radius: 12px;
+    text-align: center;
+    position: relative;
+    z-index: 960;
 }
 
-html.is-mobile #tutorialProgressBar .progress-title,
-html.is-mobile #teachProgressTitle {
+html.is-mobile #tutorialProgressBar .progress-header {
+    justify-content: center;
+    gap: 12px;
+}
+
+html.is-mobile #tutorialProgressBar .progress-title {
     font-size: 13px;
 }
 
-html.is-mobile #tutorialProgressBar .progress-text,
-html.is-mobile #teachProgressText {
+html.is-mobile #tutorialProgressBar .progress-text {
     font-size: 12px;
+}
+
+html.is-mobile #tutorialProgressBar .progress-track {
+    height: 10px;
+    border-radius: 5px;
+}
+
+/* ---------- 关卡教学进度条：水平居中 ---------- */
+html.is-mobile #teachProgressBar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 88%;
+    max-width: 420px;
+    margin: 8px auto;
+    padding: 8px 12px;
+    background: linear-gradient(180deg, #ffffff, #f0f4ff);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    position: relative;
+    z-index: 960;
+}
+
+html.is-mobile .teach-progress-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #4a5cc5;
+    white-space: nowrap;
+}
+
+html.is-mobile .teach-progress-track {
+    flex: 1;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+html.is-mobile .teach-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #6a7ce5, #4a9eff);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.is-mobile .teach-progress-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: #4a5cc5;
+    white-space: nowrap;
 }
 
 /* ---------- 棋盘 ---------- */
@@ -162,9 +268,9 @@ html.is-mobile .board {
     padding: 2px;
     border-radius: 6px;
     margin: 0 auto;
-    /* 单元格尺寸由 JS 动态计算，这里只做最小保障 */
     max-width: 100vw;
     overflow: visible;
+    justify-content: center;
 }
 
 html.is-mobile .cell {
@@ -174,12 +280,30 @@ html.is-mobile .cell {
     border-radius: 3px;
 }
 
-/* ---------- 地雷槽 ---------- */
+/* ---------- 地雷槽（允许滚动） ---------- */
 html.is-mobile .mine-slot-box {
     padding: 12px 8px;
     gap: 8px;
     margin-top: 12px;
     border-radius: 10px;
+    /* 关键：允许横向滚动 */
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+    /* 显示滚动条提示 */
+    scrollbar-width: thin;
+}
+
+html.is-mobile .mine-slot-box::-webkit-scrollbar {
+    height: 4px;
+}
+
+html.is-mobile .mine-slot-box::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.2);
+    border-radius: 2px;
 }
 
 html.is-mobile .mine-item {
@@ -188,6 +312,7 @@ html.is-mobile .mine-item {
     font-size: 11px;
     border-radius: 8px;
     border-width: 2px;
+    flex-shrink: 0; /* 防止被压缩 */
 }
 
 html.is-mobile .mine-item .emoji-drag {
@@ -200,12 +325,21 @@ html.is-mobile .mine-item .big-blackhole-bomb {
     font-size: 24px !important;
 }
 
+/* 创造模式地雷槽 */
+html.is-mobile #createMineSlot {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+}
+
 /* ---------- 预设开始卡片 ---------- */
 html.is-mobile .preset-start-card {
     padding: 28px 16px 24px;
     min-height: 240px;
     max-width: 340px;
     border-radius: 14px;
+    margin: 12px auto;
 }
 
 html.is-mobile .preset-start-icon {
@@ -224,6 +358,11 @@ html.is-mobile .preset-start-btn {
     padding: 12px 36px;
     font-size: 16px;
     border-radius: 12px;
+}
+
+html.is-mobile .preset-start-tag {
+    font-size: 13px;
+    padding: 5px 14px;
 }
 
 /* ---------- 模态框通用 ---------- */
@@ -304,6 +443,9 @@ html.is-mobile .achievement-sidebar {
     transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 998;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    /* 允许侧边栏内部滚动 */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 html.is-mobile .sidebar.open,
@@ -313,16 +455,7 @@ html.is-mobile .achievement-sidebar.open {
     transform: translateY(0);
 }
 
-/* 侧边栏内部滚动 */
-html.is-mobile .sidebar,
-html.is-mobile .info-sidebar,
-html.is-mobile .rule-sidebar,
-html.is-mobile .achievement-sidebar {
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-/* 隐藏桌面端的侧边栏触发按钮（竖边栏 tab） */
+/* 隐藏桌面端的侧边栏触发按钮 */
 html.is-mobile .sidebar-toggle,
 html.is-mobile .info-sidebar-toggle,
 html.is-mobile .rule-sidebar-toggle,
@@ -343,13 +476,15 @@ html.is-mobile .sidebar-section {
 
 /* ---------- 难度按钮行 ---------- */
 html.is-mobile .preset-row {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 6px;
+    margin-bottom: 8px;
 }
 
 html.is-mobile .preset-btn {
-    flex: 1 1 calc(33% - 6px);
-    min-width: 70px;
+    width: 100%;
+    min-width: 0;
     padding: 8px 4px;
     font-size: 12px;
     border-width: 3px;
@@ -417,6 +552,7 @@ html.is-mobile .switch-toggle.on::after {
 
 html.is-mobile .switch-hint {
     font-size: 11px;
+    line-height: 1.5;
 }
 
 /* ---------- 题库码输入 ---------- */
@@ -486,14 +622,12 @@ html.is-mobile .mine-info-tip {
     font-size: 11px;
 }
 
-/* 预览浮层在手机上居中显示 */
 html.is-mobile .mine-preview {
     left: 50% !important;
     transform: translateX(-50%) translateY(8px) scale(0.97) !important;
     z-index: 2000;
 }
 
-html.is-mobile .mine-info-tip:hover .mine-preview,
 html.is-mobile .mine-info-tip:active .mine-preview {
     transform: translateX(-50%) translateY(0) scale(1) !important;
 }
@@ -577,6 +711,14 @@ html.is-mobile .create-error {
     margin-top: 4px;
 }
 
+html.is-mobile .create-info-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
 html.is-mobile .info-chip {
     font-size: 12px;
     padding: 4px 8px;
@@ -627,35 +769,49 @@ html.is-mobile .back-btn {
     margin-top: 10px;
 }
 
-/* ---------- 教学气泡 ---------- */
+/* ---------- 教学气泡：水平居中、悬浮最上层、不挡棋盘 ---------- */
 html.is-mobile .teach-bubble {
     position: fixed;
-    bottom: 80px;
-    left: 10px;
-    right: 10px;
-    max-width: 400px;
-    margin: 0 auto;
-    padding: 12px 14px;
-    border-radius: 12px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 88vw;
+    max-width: 380px;
+    padding: 16px 18px;
+    border-radius: 14px;
     font-size: 13px;
-    z-index: 950;
-    background: rgba(255,255,255,0.96);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    z-index: 9999;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(74,92,229,0.12);
+    border: 2px solid rgba(74,92,229,0.25);
+    pointer-events: auto;
+    /* 使用 margin 而非 bottom 定位，避免遮挡棋盘 */
+    margin: 0;
 }
 
 html.is-mobile .teach-bubble-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
+    color: #4a5cc5;
+    margin-bottom: 6px;
 }
 
 html.is-mobile .teach-bubble-text {
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.6;
     white-space: pre-line;
+    color: #2d3748;
 }
 
 html.is-mobile .teach-bubble-hint {
     font-size: 11px;
+    color: #718096;
+    margin-top: 6px;
+}
+
+/* 教学气泡内的进度条 */
+html.is-mobile .teach-bubble .teach-progress {
+    margin-bottom: 8px;
 }
 
 /* ---------- 教学完成模态框 ---------- */
@@ -665,6 +821,7 @@ html.is-mobile .teach-complete-modal {
     max-width: 360px;
     padding: 28px 18px 22px;
     border-radius: 16px;
+    z-index: 10000;
 }
 
 html.is-mobile .teach-complete-modal h2 {
@@ -735,7 +892,7 @@ html.is-mobile .achievement-desc {
     font-size: 11px;
 }
 
-/* ---------- BGM 滑块 ---------- */
+/* ---------- BGM 滑块（在菜单侧边栏内） ---------- */
 html.is-mobile .bgm-slider {
     width: 100%;
     max-width: 200px;
@@ -818,15 +975,6 @@ html.is-mobile .series-locked-notice {
     margin-bottom: 8px;
 }
 
-/* ---------- 创造模式信息栏 ---------- */
-html.is-mobile .create-info-bar {
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
 /* ---------- 长按删除提示 ---------- */
 html.is-mobile .long-press-hint {
     display: block !important;
@@ -864,22 +1012,27 @@ html.is-mobile * {
         max-height: 400px;
     }
 
-    html.is-mobile .panel button {
-        flex: 0 1 auto;
-        padding: 6px 12px;
-        font-size: 12px;
+    html.is-mobile .panel,
+    html.is-mobile .mobile-btn-grid {
+        grid-template-columns: repeat(8, 1fr);
+        max-width: 700px;
     }
 
-    html.is-mobile .mobile-sidebar-row button {
-        flex: 0 1 auto;
-        padding: 6px 10px;
+    html.is-mobile .panel button,
+    html.is-mobile .mobile-btn-grid button {
         font-size: 11px;
+        padding: 6px 4px;
     }
 
     html.is-mobile .cell {
         width: var(--cell-size, 28px);
         height: var(--cell-size, 28px);
         font-size: var(--cell-font, 11px);
+    }
+
+    html.is-mobile .teach-bubble {
+        max-width: 320px;
+        padding: 12px 14px;
     }
 }
 
@@ -889,22 +1042,10 @@ html.is-mobile * {
         font-size: 26px;
     }
 
-    html.is-mobile .panel button {
-        font-size: 12px;
-        padding: 7px 10px;
-        min-width: 68px;
-    }
-
-    html.is-mobile .mobile-sidebar-row button {
+    html.is-mobile .panel button,
+    html.is-mobile .mobile-btn-grid button {
         font-size: 11px;
-        padding: 7px 8px;
-        min-width: 60px;
-    }
-
-    html.is-mobile .preset-btn {
-        font-size: 11px;
-        padding: 7px 2px;
-        min-width: 60px;
+        padding: 8px 2px;
     }
 
     html.is-mobile .mine-item {
@@ -915,5 +1056,10 @@ html.is-mobile * {
 
     html.is-mobile .mine-item .emoji-drag {
         font-size: 16px !important;
+    }
+
+    html.is-mobile .preset-btn {
+        font-size: 11px;
+        padding: 7px 2px;
     }
 }
