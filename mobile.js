@@ -217,38 +217,15 @@
         board.addEventListener('gesturechange', function (e) { e.preventDefault(); });
     }
 
-    /* 4c. 动态调整单元格大小以适应屏幕 */
-    function calcCellSize() {
+    /* 4c. 棋盘极缩放：用 transform: scale()，不改变 grid 逻辑结构 */
+    function wrapBoard() {
         var boardEl = document.getElementById('board');
-        if (!boardEl) return;
-
-        var sr = window.SR || parseInt(getText('size')) || 10;
-        var sc = window.SC || sr;
-        var cols = Math.max(sr, sc);
-
-        var vw = window.innerWidth;
-        var sidePadding = vw <= 375 ? 12 : (vw <= 414 ? 16 : 20);
-        var availableWidth = vw - sidePadding;
-
-        var cellSize = Math.floor((availableWidth - (cols - 1) * 1) / cols);
-        cellSize = Math.max(22, Math.min(cellSize, 48));
-
-        document.documentElement.style.setProperty('--cell-size', cellSize + 'px');
-        document.documentElement.style.setProperty('--cell-font', Math.floor(cellSize * 0.42) + 'px');
-
-        var gridRows = 'repeat(' + sr + ', ' + cellSize + 'px)';
-        var gridCols = 'repeat(' + sc + ', ' + cellSize + 'px)';
-        boardEl.style.gridTemplateRows = gridRows;
-        boardEl.style.gridTemplateColumns = gridCols;
-
-        var createArea = document.getElementById('createBoardArea');
-        if (createArea) {
-            var createBoard = createArea.querySelector('.board');
-            if (createBoard) {
-                createBoard.style.gridTemplateRows = gridRows;
-                createBoard.style.gridTemplateColumns = gridCols;
-            }
-        }
+        if (!boardEl || boardEl.parentElement.classList.contains('board-wrapper')) return;
+        var wrapper = document.createElement('div');
+        wrapper.className = 'board-wrapper';
+        wrapper.id = 'boardWrapper';
+        boardEl.parentNode.insertBefore(wrapper, boardEl);
+        wrapper.appendChild(boardEl);
     }
 
     function getText(id) {
@@ -256,23 +233,72 @@
         return el ? el.textContent.trim() : '';
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', calcCellSize);
-    } else {
-        calcCellSize();
+    function calcBoardScale() {
+        var boardEl = document.getElementById('board');
+        if (!boardEl) return;
+
+        var sr = window.SR || parseInt(getText('size'), 10) || 10;
+        var sc = window.SC || sr;
+        var cols = Math.max(sr, sc);
+
+        /* 测量格子实际渲染尺寸（桌面端基础值） */
+        var sampleCell = boardEl.querySelector('.cell');
+        var baseCell = 40; /* 桌面端 CSS 基础尺寸 */
+        if (sampleCell) {
+            var rect = sampleCell.getBoundingClientRect();
+            if (rect.width > 0) baseCell = rect.width;
+        }
+
+        var vw = window.innerWidth;
+        var sidePadding = vw <= 375 ? 16 : (vw <= 414 ? 20 : 24);
+        var availableWidth = vw - sidePadding;
+        /* 格子间距约 2px */
+        var boardWidth = cols * baseCell + (cols - 1) * 2 + 8; /* +8 为 board padding */
+        var scale = availableWidth / boardWidth;
+        scale = Math.max(0.45, Math.min(scale, 1.0));
+
+        boardEl.style.transform = 'scale(' + scale + ')';
+        boardEl.style.transformOrigin = 'top center';
+        /* 用 wrapper 控制占位高度，避免 scale 后塌陷 */
+        var wrapper = document.getElementById('boardWrapper');
+        if (wrapper) {
+            wrapper.style.height = (boardEl.offsetHeight * scale) + 'px';
+        }
+
+        /* 同步创造模式棋盘 */
+        var createArea = document.getElementById('createBoardArea');
+        if (createArea) {
+            var createBoard = createArea.querySelector('.board');
+            if (createBoard) {
+                createBoard.style.transform = 'scale(' + scale + ')';
+                createBoard.style.transformOrigin = 'top center';
+            }
+        }
     }
-    window.addEventListener('load', calcCellSize);
+
+    function initBoard() {
+        wrapBoard();
+        calcBoardScale();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBoard);
+    } else {
+        initBoard();
+    }
+    window.addEventListener('load', initBoard);
 
     var resizeTimer = null;
     window.addEventListener('resize', function () {
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(calcCellSize, 100);
+        resizeTimer = setTimeout(calcBoardScale, 100);
     });
     window.addEventListener('orientationchange', function () {
-        setTimeout(calcCellSize, 200);
-        setTimeout(calcCellSize, 500);
+        setTimeout(calcBoardScale, 200);
+        setTimeout(calcBoardScale, 500);
     });
 
+    /* 棋盘 DOM 变化后重新计算 */
     var boardEl = document.getElementById('board');
     if (boardEl && typeof MutationObserver !== 'undefined') {
         var observer = new MutationObserver(function (mutations) {
@@ -283,30 +309,27 @@
                     break;
                 }
             }
-            if (shouldRecalc) calcCellSize();
+            if (shouldRecalc) calcBoardScale();
         });
         observer.observe(boardEl, { childList: true, subtree: true });
     }
 
-    /* ---------- 5. 手机端专用：两行四列按钮组 ---------- */
-    function buildMobileButtonGrid() {
-        if (document.querySelector('.mobile-btn-grid')) return;
+    /* ---------- 5. 第二行按钮：仅侧边栏切换（4个） ---------- */
+    /* 不重复 .panel 里已有的 新游戏/清空/创造/教学 按钮 */
+    function buildSidebarButtonRow() {
+        if (document.querySelector('.panel-sidebar-row')) return;
 
         var panel = document.querySelector('.panel');
         if (!panel) return;
 
-        var grid = document.createElement('div');
-        grid.className = 'mobile-btn-grid';
+        var row = document.createElement('div');
+        row.className = 'panel-sidebar-row';
 
         var buttons = [
-            { cls: 'mbg-reset',     text: '🆕 新游戏',  action: function () { clickEl('reset'); } },
-            { cls: 'mbg-clear',     text: '🧹 清空放置', action: function () { clickEl('clear'); } },
-            { cls: 'mbg-create',    text: '✍️ 创造',    action: function () { clickEl('createBtn'); } },
-            { cls: 'mbg-tutorial',  text: '🧐 教学',    action: function () { clickEl('tutorialBtn'); } },
-            { cls: 'mbg-rules',     text: '📖 规则',     action: function () { clickEl('toggleRuleSidebar'); } },
-            { cls: 'mbg-info',      text: '💣 炸弹信息', action: function () { clickEl('toggleInfoSidebar'); } },
-            { cls: 'mbg-records',   text: '📝 记录',     action: function () { clickEl('toggleAchSidebar'); } },
-            { cls: 'mbg-menu',      text: '⚙️ 菜单',     action: function () { clickEl('toggleSidebar'); } }
+            { cls: 'psb-rules',   text: '📖 规则',   action: function () { clickEl('toggleRuleSidebar'); } },
+            { cls: 'psb-info',    text: '💣 炸弹信息', action: function () { clickEl('toggleInfoSidebar'); } },
+            { cls: 'psb-records', text: '📝 记录',   action: function () { clickEl('toggleAchSidebar'); } },
+            { cls: 'psb-menu',    text: '⚙️ 菜单',   action: function () { clickEl('toggleSidebar'); } }
         ];
 
         for (var b = 0; b < buttons.length; b++) {
@@ -320,10 +343,11 @@
                     action();
                 };
             })(buttons[b].action), { passive: false });
-            grid.appendChild(btn);
+            row.appendChild(btn);
         }
 
-        panel.parentNode.insertBefore(grid, panel.nextSibling);
+        /* 插入到 .panel 之后，作为第二行 */
+        panel.parentNode.insertBefore(row, panel.nextSibling);
     }
 
     function clickEl(id) {
@@ -332,11 +356,11 @@
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', buildMobileButtonGrid);
+        document.addEventListener('DOMContentLoaded', buildSidebarButtonRow);
     } else {
-        buildMobileButtonGrid();
+        buildSidebarButtonRow();
     }
-    window.addEventListener('load', buildMobileButtonGrid);
+    window.addEventListener('load', buildSidebarButtonRow);
 
     /* ---------- 6. 触感反馈（Vibration API） ---------- */
     function vibrate(ms) {
@@ -429,14 +453,6 @@
     }, { passive: true });
 
     /* ---------- 9. 输入框特殊处理 ---------- */
-    var puzzleInput = document.getElementById('puzzleCodeInput');
-    if (puzzleInput) {
-        puzzleInput.addEventListener('focus', function () {
-            var meta = document.querySelector('meta[name=viewport]');
-            if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
-        });
-    }
-
     ['createSize', 'createSize2'].forEach(function (id) {
         var inp = document.getElementById(id);
         if (inp) {
