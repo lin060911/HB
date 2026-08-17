@@ -8,7 +8,6 @@ html.is-mobile,
 html.is-mobile body {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;       /* 禁双击缩放 */
     overscroll-behavior-y: contain;   /* 防下拉刷新干扰 */
 }
 
