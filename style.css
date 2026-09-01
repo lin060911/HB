@@ -12,6 +12,7 @@
             --cell: 40px;          /* 兜底值，实际由 .board 覆盖 */
             --board-max-h: 66vh;   /* 棋盘允许占用的最大高度 */
             --side-w: 340px;       /* 侧边栏宽度 */
+            --tabbar-h: 0px;       /* 底部标签栏高度（仅手机端启用，桌面为 0） */
         }
         /* 支持动态视口高度的浏览器（移动端地址栏收起/展开更准确） */
         @supports (height: 1dvh) {
@@ -49,7 +50,7 @@
                 ),
                 linear-gradient(180deg, #c2e286 2%, #b1e4b3 60%, #e8f4f8);
             
-            padding: 20px;
+            padding: 20px 20px calc(20px + var(--tabbar-h));
             min-height: calc(100vh + 1px);          
             position: relative;
             overflow-x: hidden;
@@ -836,6 +837,11 @@
         @keyframes sidebarSectionIn {
             0%   { opacity: 0; transform: translateX(20px) scale(0.98); }
             100% { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        /* 手机端侧边栏从底部弹出，内容入场方向同步改成从下往上 */
+        @keyframes sidebarSectionUp {
+            0%   { opacity: 0; transform: translateY(18px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         .sidebar-title {
@@ -2574,24 +2580,112 @@
                 --cell-min: 14px;
                 --board-max-h: 62vh;
                 --side-w: min(460px, 92vw);
+                --tabbar-h: calc(52px + env(safe-area-inset-bottom));
             }
             body {
-                padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+                padding: 12px 12px calc(12px + var(--tabbar-h));
                 touch-action: manipulation;
             }
             .game-title { font-size: clamp(30px, 8vw, 46px); margin: 10px 0; }
             .rule { font-size: 14px; margin-bottom: 10px; padding: 0 6px; }
 
-            /* 侧边栏：宽度跟随屏幕，底部留安全区 */
-            .sidebar { width: var(--side-w); padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); height: 100%; }
+            /* ===== 底部标签栏：四个侧边栏把手改成 panel 风格，横排贴底 =====
+               （原本竖排贴在左右两侧，会压住棋盘；手机端统一挪到页面底部） */
+            .left-sidebar-container {
+                display: contents;
+                /* 兜底：不支持 display:contents 时退化成 0 高度容器，不挡内容 */
+                position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+                width: 100%; height: 0; z-index: 998; pointer-events: none;
+            }
+
+            .sidebar-toggle,
+            .info-sidebar-toggle,
+            .rule-sidebar-toggle,
+            .achievement-sidebar-toggle {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                width: 25%;
+                height: var(--tabbar-h);
+                margin: 0;
+                padding: 0 3px env(safe-area-inset-bottom);
+                writing-mode: horizontal-tb;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border: none;
+                border-radius: 12px 12px 0 0;
+                border-top: 2px solid rgba(255, 255, 255, 0.35);
+                font-family: inherit;
+                font-size: 14px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+                color: #fff;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+                box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+                z-index: 998;
+                will-change: transform;
+                transition: filter 0.35s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            #toggleRuleSidebar { left: 0; }
+            #toggleInfoSidebar { left: 25%; }
+            #toggleAchSidebar  { left: 50%; }
+            #toggleSidebar     { left: 75%; }
+            #toggleInfoSidebar,
+            #toggleAchSidebar,
+            #toggleSidebar { border-left: 1px solid rgba(255, 255, 255, 0.3); }
+            /* 桌面端「打开后把手跟着侧边栏平移」的规则在手机端失效 */
+            .info-sidebar.open ~ .info-sidebar-toggle { left: 25%; }
+            .rule-sidebar.open ~ .rule-sidebar-toggle { left: 0; }
+            /* 点按反馈 */
+            .sidebar-toggle:active,
+            .info-sidebar-toggle:active,
+            .rule-sidebar-toggle:active,
+            .achievement-sidebar-toggle:active {
+                filter: brightness(1.16);
+                transform: scale(0.96);
+                transition-duration: 0.12s;
+            }
+            /* 抽屉展开时对应标签高亮（不支持 :has() 的浏览器自动忽略） */
+            #toggleSidebar:has(+ .sidebar.open),
+            #toggleAchSidebar:has(+ .achievement-sidebar.open) {
+                filter: brightness(1.12) saturate(1.08);
+                box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.14), inset 0 3px 0 rgba(255, 255, 255, 0.85);
+            }
+
+            /* ===== 侧边栏：改为从底部向上弹出的抽屉 ===== */
+            .sidebar,
             .info-sidebar,
             .rule-sidebar,
             .achievement-sidebar {
-                width: min(340px, 90vw);
-                height: 100%;
-                padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+                top: auto;
+                bottom: var(--tabbar-h);
+                left: 0;
+                right: 0;
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+                max-height: calc(100vh - var(--tabbar-h) - 12px);
+                padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 18px 18px 0 0;
+                box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.18);
+                transform: translateY(calc(100% + var(--tabbar-h) + 4px));
+                visibility: hidden;
+                z-index: 999;
+                transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.42s;
             }
-            .info-sidebar { padding-left: 40px; }
+            .sidebar.open,
+            .info-sidebar.open,
+            .rule-sidebar.open,
+            .achievement-sidebar.open {
+                transform: translateY(0);
+                visibility: visible;
+            }
+            /* 抽屉内容入场方向跟着改成从下往上 */
+            .sidebar-section { animation-name: sidebarSectionUp; }
 
             /* 居中弹窗 */
             .auto-modal {
@@ -2614,8 +2708,9 @@
                 --cell-max: 38px;
                 --board-max-h: 58vh;
                 --side-w: 92vw;
+                --tabbar-h: calc(48px + env(safe-area-inset-bottom));
             }
-            body { padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); }
+            body { padding: 8px 6px calc(8px + var(--tabbar-h)); }
 
             .game-title { font-size: clamp(26px, 8.5vw, 38px); margin: 6px 0 8px; }
             .rule { font-size: 12.5px; margin-bottom: 8px; letter-spacing: 0; }
@@ -2652,16 +2747,16 @@
             .mode-toggle-btn .mode-icon { font-size: 15px; }
             .mode-toggle-btn .mode-label { white-space: normal; }
 
-            /* 侧边栏把手 */
+            /* 底部标签栏尺寸微调 */
             .sidebar-toggle,
             .info-sidebar-toggle,
             .rule-sidebar-toggle,
             .achievement-sidebar-toggle {
-                padding: 16px 9px;
+                height: var(--tabbar-h);
                 font-size: 13px;
-                border-radius: 10px;
+                letter-spacing: 0;
+                border-radius: 10px 10px 0 0;
             }
-            .left-sidebar-container { height: 100%; }
 
             /* 地雷槽：卡片变小、图标跟着缩 */
             .mine-slot-box {
@@ -2736,6 +2831,10 @@
             .mine-item .emoji-drag,
             .mine-item [class$="-bomb"] { font-size: 18px !important; }
             .mode-toggle-btn { padding: 6px 10px; font-size: 11px; }
+            .sidebar-toggle,
+            .info-sidebar-toggle,
+            .rule-sidebar-toggle,
+            .achievement-sidebar-toggle { font-size: 11.5px; padding: 0 1px env(safe-area-inset-bottom); }
         }
 
         /* ---------- 4. 横屏（矮屏） ---------- */
@@ -2743,9 +2842,10 @@
             :root {
                 --cell-max: 34px;
                 --cell-min: 13px;
-                --board-max-h: 84vh;
+                --board-max-h: 56vh;
+                --tabbar-h: calc(42px + env(safe-area-inset-bottom));
             }
-            body { padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); }
+            body { padding: 6px 8px calc(6px + var(--tabbar-h)); }
             .game-title { font-size: 22px; margin: 2px 0 6px; }
             .rule { font-size: 11.5px; margin-bottom: 6px; }
             .panel { margin-bottom: 6px; gap: 6px; }
@@ -2762,6 +2862,10 @@
             .auto-modal p { font-size: 13px; margin-bottom: 10px; }
             .preset-start-card { min-height: 0; padding: 18px 16px 16px; }
             .preset-start-icon { font-size: 44px; margin-bottom: 6px; }
+            .sidebar-toggle,
+            .info-sidebar-toggle,
+            .rule-sidebar-toggle,
+            .achievement-sidebar-toggle { font-size: 12px; }
         }
 
         /* ---------- 5. 支持动态视口的浏览器：用 dvh 修正高度 ---------- */
@@ -2769,6 +2873,6 @@
             @media screen and (max-width: 900px) { :root { --board-max-h: 62dvh; } }
             @media screen and (max-width: 600px) { :root { --board-max-h: 58dvh; } }
             @media screen and (orientation: landscape) and (max-height: 560px) {
-                :root { --board-max-h: 84dvh; }
+                :root { --board-max-h: 56dvh; }
             }
         }
