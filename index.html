@@ -2,13 +2,15 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#b1e4b3">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>反向扫雷</title>
     <link rel="icon" type="image/png" sizes="32 * 32" href="image/bomb.png">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="style-mobile.css" media="(max-width: 900px), (pointer: coarse)">
     <base target="_blank">
 </head>
 <body>
@@ -108,7 +110,6 @@
         <button id="clear">清空放置</button>
         <button id="createBtn" onclick="enterCreateMode()">创造✍️</button>
         <button id="tutorialBtn" onclick="openTeachMode()">教学🧐</button>
-        <br>
     </div>
 
     <div class="timer-box" id="timer">00:00.00</div>
@@ -122,14 +123,6 @@
     </div>
     <div class="info">已放置：<span id="placed">0</span> / 总雷数：<span id="max">0</span></div>
     <div id="board" class="board"></div>
-
-    <div class="teach-bubble" id="teachBubble">
-        <div class="teach-progress" id="teachProgress"></div>
-        <div class="teach-bubble-icon" id="teachBubbleIcon">📖</div>
-        <div class="teach-bubble-title" id="teachBubbleTitle">教学关卡</div>
-        <div class="teach-bubble-text" id="teachBubbleText">欢迎来到教学！</div>
-        <div class="teach-bubble-hint" id="teachBubbleHint">按提示操作即可</div>
-    </div>
 
     <div class="teach-complete-modal" id="teachCompleteModal">
         <div class="icon" id="teachCompleteIcon">🎉</div>
@@ -196,7 +189,20 @@
         <button class="back-btn" onclick="exitCreateMode()">🔙退出创造模式</button>
     </div>
 
-    <div class="mine-slot-box" id="slot"></div>
+    <div class="mine-slot-box" id="slot">
+        <div class="teach-bubble" id="teachBubble">
+            <div class="teach-progress" id="teachProgress"></div>
+            <div class="teach-bubble-head">
+                <div class="teach-bubble-icon" id="teachBubbleIcon">📖</div>
+                <div class="teach-bubble-title" id="teachBubbleTitle">教学关卡</div>
+            </div>
+            <div class="teach-bubble-main">
+                <div class="teach-bubble-text" id="teachBubbleText">欢迎来到教学！</div>
+                <div class="teach-bubble-mines" id="teachBubbleMines"></div>
+            </div>
+            <div class="teach-bubble-hint" id="teachBubbleHint">按提示操作即可</div>
+        </div>
+    </div>
 
     <div class="preset-start-card" id="presetStartCard" style="display:none;">
         <div class="preset-start-icon" id="presetStartIcon">😎</div>
@@ -363,6 +369,5 @@
 
     <script src="audio.js"></script>
     <script src="game.js"></script>
-    <script src="mobile.js"></script>
 </body>
 </html>

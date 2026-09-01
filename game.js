@@ -706,7 +706,9 @@
             board.innerHTML = '';
             board.style.display = 'none';
             var slot = document.getElementById('slot');
+            var teachBubble = document.getElementById('teachBubble');
             slot.innerHTML = '';
+            if (teachBubble) slot.appendChild(teachBubble);
             slot.style.display = 'none';
             document.getElementById('timer').style.display = 'none';
             document.getElementById('placed').textContent = '0';
@@ -1123,7 +1125,8 @@ function checkWin(){
 
         function render(){
             let b=document.getElementById('board'); b.innerHTML='';
-            b.style.gridTemplateRows=`repeat(${SR},40px)`; b.style.gridTemplateColumns=`repeat(${SC},40px)`;
+            b.style.setProperty('--rows',SR); b.style.setProperty('--cols',SC);
+            b.style.gridTemplateRows=`repeat(${SR},var(--cell))`; b.style.gridTemplateColumns=`repeat(${SC},var(--cell))`;
             for(let r=0;r<SR;r++) for(let c=0;c<SC;c++){
                 let d=document.createElement('div'); d.className='cell'; d.dataset.r=r; d.dataset.c=c;
                 let t=G.tar[r][c], p=G.p[r][c], k=r+','+c;
@@ -1175,7 +1178,10 @@ function checkWin(){
         }
 
         function renderSlot(){
-            let s=document.getElementById('slot'); s.innerHTML='';
+            let s=document.getElementById('slot');
+            let teachBubble=document.getElementById('teachBubble');
+            s.innerHTML='';
+            if (teachBubble) s.appendChild(teachBubble);
             for (let t in G.pool) {
                 let max=G.pool[t];
                 if (max <= 0) continue;
@@ -1358,7 +1364,7 @@ function checkWin(){
                     [0,0,0,0,0],
                 ],
                 steps: [
-                    { text: "这是一颗 💣普通雷\n它会让周围 3×3 范围每个格子 +1\n\n棋盘中央有一块 3×3 的「1」区域 \n先点击下方地雷选中它，再点击棋盘放置吧！", hint: "普通雷 3x3 范围 +1" },
+                    { text: "这是一颗 💣普通雷\n它会让周围 3×3 范围每个格子 +1\n\n棋盘中央有一块 3×3 的「1」区域 \n拖动地雷到棋盘上放置吧！", hint: "普通雷 3x3 范围 +1" },
                     { text: "提示：放在区域中心位置（第3行第3列）\n它的 3×3 影响范围才能刚好覆盖所有 1。", hint: "右键点击已放置的地雷可删除🚫", targetCell: [2,2] },
                 ]
             },
@@ -1550,7 +1556,7 @@ function checkWin(){
                     [0,0,0,0,0,0,0,0],
                 ],
                 steps: [
-                    { text: "这是为你准备的最后考题\n想想刚才所有的特性\n用下方的四个地雷，把棋盘变绿吧！", hint: "正负叠加 → 1+(-1)=0" },
+                    { text: "这是为你准备的最后考题\n\n想想刚才所有的特性\n\n用这里的四个地雷，把棋盘变绿吧！", hint: "正负叠加 → 1+(-1)=0" },
                     { text: "巨型雷💣轮廓最明显\n把它放在第5行第4列正好", hint: "右键点击已放置的地雷可删除🚫", targetCell: [4,3] },
                     { text: "把💥放到第3行第6列\n与巨型雷的范围叠加\n两者重叠区域 → 1+(-1)=0 ✅", hint: "右键点击已放置的地雷可删除🚫", targetCell: [2,5] },
                     { text: "把竖辣椒放到第3行2列\n与巨型雷的范围叠加区域\n1+1=2 ✅", hint: "右键点击已放置的地雷可删除🚫", targetCell: [2,1] },
@@ -1584,6 +1590,7 @@ function checkWin(){
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('teachProgressBar').style.display = 'block';
             updateTeachProgressBar();
+            ensureTeachSlotHost(true);
             loadTeachLevel();
         }
 
@@ -1615,6 +1622,7 @@ function checkWin(){
 
             teachStepIdx = 0;
 
+            ensureTeachSlotHost(true);
             renderTeachSlot();
             renderTeachBoard();
             showTeachStep();
@@ -1629,8 +1637,9 @@ function checkWin(){
             let lvl = TEACH_LEVELS[teachLevelIdx];
             let b = document.getElementById('board');
             b.innerHTML = '';
-            b.style.gridTemplateRows = `repeat(${SR},40px)`;
-            b.style.gridTemplateColumns = `repeat(${SC},40px)`;
+            b.style.setProperty('--rows', SR); b.style.setProperty('--cols', SC);
+            b.style.gridTemplateRows = `repeat(${SR},var(--cell))`;
+            b.style.gridTemplateColumns = `repeat(${SC},var(--cell))`;
             for (let r = 0; r < SR; r++) {
                 for (let c = 0; c < SC; c++) {
                     let d = document.createElement('div');
@@ -1701,8 +1710,24 @@ function checkWin(){
         function renderTeachSlot() {
             let lvl = TEACH_LEVELS[teachLevelIdx];
             let s = document.getElementById('slot');
-            s.innerHTML = '';
+            let bubble = document.getElementById('teachBubble');
+            let minesBox = null;
+            if (bubble) {
+                if (bubble.parentElement !== s) s.appendChild(bubble);
+                minesBox = document.getElementById('teachBubbleMines');
+                if (!minesBox) {
+                    minesBox = document.createElement('div');
+                    minesBox.className = 'teach-bubble-mines';
+                    minesBox.id = 'teachBubbleMines';
+                    bubble.appendChild(minesBox);
+                }
+                Array.prototype.slice.call(s.children).forEach(function (ch) {
+                    if (ch !== bubble) s.removeChild(ch);
+                });
+                minesBox.innerHTML = '';
+            }
             s.style.display = '';
+            ensureTeachSlotHost();
             let mt = lvl.mineTypes || (lvl.mineType ? {[lvl.mineType]:1} : {});
             for (let t in mt) {
                 let expected = mt[t];
@@ -1738,8 +1763,22 @@ function checkWin(){
                     };
                 }
                 div.innerHTML = `<div class="emoji-drag ${M[t].cls}">${M[t].e}</div><div>${M[t].n}</div><div>${placed}/${expected}</div>`;
-                s.appendChild(div);
+                if (minesBox) minesBox.appendChild(div); else s.appendChild(div);
             }
+        }
+
+        function ensureTeachSlotHost(replay) {
+            let s = document.getElementById('slot');
+            if (!s) return;
+            if (replay) {
+                s.classList.remove('teach-slot-host');
+                void s.offsetWidth;
+            }
+            s.classList.add('teach-slot-host');
+        }
+        function clearTeachSlotHost() {
+            let s = document.getElementById('slot');
+            if (s) s.classList.remove('teach-slot-host');
         }
 
         function teachDrop(r, c, forceType) {
@@ -1820,6 +1859,8 @@ function checkWin(){
         function showTeachStep(isCorrect) {
             let lvl = TEACH_LEVELS[teachLevelIdx];
             let bubble = document.getElementById('teachBubble');
+            bubble.classList.remove('visible', 'mines-only');
+            void bubble.offsetWidth;
             bubble.classList.add('visible');
 
             let steps = lvl.steps || [];
@@ -1897,7 +1938,12 @@ function checkWin(){
                 AudioFX.win();
             }
             modal.classList.add('visible');
-            document.getElementById('teachBubble').classList.remove('visible');
+            let bubble = document.getElementById('teachBubble');
+            if (bubble) {
+                bubble.classList.remove('visible');
+                void bubble.offsetWidth;
+                bubble.classList.add('visible', 'mines-only');
+            }
         }
 
         function teachNextLevel() {
@@ -1916,7 +1962,8 @@ function checkWin(){
             AudioFX.confirm();
             document.querySelector('.panel').style.display = 'flex';
             document.getElementById('teachCompleteModal').classList.remove('visible');
-            document.getElementById('teachBubble').classList.remove('visible');
+            document.getElementById('teachBubble').classList.remove('visible', 'mines-only');
+            clearTeachSlotHost();
             document.querySelectorAll('.cell-teach-target').forEach(el => el.classList.remove('cell-teach-target'));
             teachActive = false;
             document.getElementById('teachProgressBar').style.display = 'none';
@@ -1929,7 +1976,8 @@ function checkWin(){
             AudioFX.confirm();
             document.querySelector('.panel').style.display = 'flex';
             document.getElementById('teachCompleteModal').classList.remove('visible');
-            document.getElementById('teachBubble').classList.remove('visible');
+            document.getElementById('teachBubble').classList.remove('visible', 'mines-only');
+            clearTeachSlotHost();
             document.querySelectorAll('.cell-teach-target').forEach(el => el.classList.remove('cell-teach-target'));
             document.getElementById('teachProgressBar').style.display = 'none';
             teachActive = false;
@@ -1981,7 +2029,8 @@ function checkWin(){
             document.querySelectorAll('.auto-modal').forEach(m => { m.style.display = 'none'; });
             document.getElementById('timer').style.display = isFreeMode ? 'none' : 'none';
             teachActive = false;
-            document.getElementById('teachBubble').classList.remove('visible');
+            document.getElementById('teachBubble').classList.remove('visible', 'mines-only');
+            clearTeachSlotHost();
             document.getElementById('teachCompleteModal').classList.remove('visible');
             document.querySelectorAll('.cell-teach-target').forEach(el => el.classList.remove('cell-teach-target'));
             document.querySelectorAll('.cell-teach-correct').forEach(el => el.classList.remove('cell-teach-correct'));
@@ -2036,7 +2085,9 @@ function checkWin(){
             if (saved === 'drag' || saved === 'click') {
                 window._placeMode = saved;
             } else {
-                window._placeMode = 'drag'; 
+                // 触屏设备不支持 HTML5 拖拽，首次进入默认「点选」
+                const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+                window._placeMode = isTouch ? 'click' : 'drag';
             }
             applyPlaceModeUI();
         }
@@ -2227,8 +2278,9 @@ function checkWin(){
             let rows = createRows, cols = createCols;
             let board = document.createElement('div');
             board.className = 'board';
-            board.style.gridTemplateRows = `repeat(${rows},40px)`;
-            board.style.gridTemplateColumns = `repeat(${cols},40px)`;
+            board.style.setProperty('--rows', rows); board.style.setProperty('--cols', cols);
+            board.style.gridTemplateRows = `repeat(${rows},var(--cell))`;
+            board.style.gridTemplateColumns = `repeat(${cols},var(--cell))`;
             let tempP = Array.from({length: rows}, () => Array(cols).fill(0));
             let oldSR = SR, oldSC = SC; SR = rows; SC = cols;
             for (let k in createPlaced) {
